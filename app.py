@@ -1,228 +1,196 @@
-from flask import Flask, request, jsonify, render_template_string
+import os
+import json
+import random
+import smtplib
+import ssl
+from flask import (
+    Flask, request, render_template, redirect, url_for,
+    session, flash
+)
+from dotenv import load_dotenv
 
+load_dotenv()
 app = Flask(__name__)
+app.secret_key = os.getenv('SECRET_KEY')
 
-html = """
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Calorie Calculator</title>
-  <style>
-    /* Global Reset & Box Sizing */
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+EMAIL_ADDRESS = os.getenv('EMAIL_ADDRESS')
+EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD')
+SMTP_SERVER = 'smtp.gmail.com'
+SMTP_PORT = 587
+USERS_FILE = 'users.json'
 
-    /* Full-screen gradient background with centered container */
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, #74ebd5, #acb6e5);
-      height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
 
-    /* Container styling with card look and slide-in animation */
-    .container {
-      background: #fff;
-      width: 400px;
-      padding: 2rem;
-      border-radius: 15px;
-      box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
-      animation: slideIn 1s ease-out;
-    }
+def load_users():
+    if not os.path.exists(USERS_FILE):
+        with open(USERS_FILE, 'w') as f:
+            json.dump({"users": []}, f)
+    with open(USERS_FILE, 'r') as f:
+        return json.load(f)
 
-    @keyframes slideIn {
-      0% {
-        opacity: 0;
-        transform: translateY(50px);
-      }
-      100% {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
 
-    h1 {
-      text-align: center;
-      margin-bottom: 1.5rem;
-      font-size: 2em;
-      color: #333;
-    }
+def save_users(data):
+    with open(USERS_FILE, 'w') as f:
+        json.dump(data, f, indent=4)
 
-    /* Form Styling */
-    form {
-      display: flex;
-      flex-direction: column;
-    }
 
-    label {
-      margin: 0.5rem 0 0.2rem;
-      font-weight: bold;
-      color: #555;
-    }
+def find_user(email):
+    data = load_users()
+    return next((u for u in data['users'] if u['email'] == email), None)
 
-    input, select {
-      padding: 0.75rem;
-      margin-bottom: 1rem;
-      border: 2px solid #ddd;
-      border-radius: 8px;
-      font-size: 1em;
-      transition: border-color 0.3s, transform 0.3s;
-    }
 
-    input:focus, select:focus {
-      outline: none;
-      border-color: #74ebd5;
-      transform: scale(1.02);
-    }
+def send_otp_email(to_email, otp):
+    subject = "Your OTP Code"
+    body = f"Your OTP is: {otp}"
+    msg = f"Subject: {subject}\n\n{body}"
+    ctx = ssl.create_default_context()
+    with smtplib.SMTP(SMTP_SERVER, SMTP_PORT) as server:
+        server.starttls(context=ctx)
+        server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
+        server.sendmail(EMAIL_ADDRESS, to_email, msg)
 
-    /* Remove spinner arrows in Chrome, Safari, Edge, Opera */
-    input[type=number]::-webkit-outer-spin-button,
-    input[type=number]::-webkit-inner-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
-    }
 
-    /* Remove spinner arrows in Firefox */
-    input[type=number] {
-      -moz-appearance: textfield;
-    }
-
-    /* Button Styling with Gradient and Animations */
-    button {
-      padding: 0.75rem;
-      font-size: 1em;
-      background: linear-gradient(45deg, #74ebd5, #acb6e5);
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
-      position: relative;
-      overflow: hidden;
-    }
-
-    button:hover {
-      transform: scale(1.05);
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-    }
-
-    button:active {
-      transform: scale(0.98);
-    }
-
-    /* Result Display with Fade-In */
-    #result {
-      margin-top: 1.5rem;
-      font-size: 1.2em;
-      text-align: center;
-      opacity: 0;
-      animation: fadeIn 1s forwards;
-      animation-delay: 0.5s;
-    }
-
-    @keyframes fadeIn {
-      to {
-        opacity: 1;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h1>Calorie Calculator</h1>
-    <form id="calorieForm">
-      <label for="age">Age (years):</label>
-      <input type="number" id="age" name="age" required>
-      
-      <label for="weight">Weight (kg):</label>
-      <input type="number" id="weight" name="weight" required>
-      
-      <label for="height">Height (cm):</label>
-      <input type="number" id="height" name="height" required>
-      
-      <label for="gender">Gender:</label>
-      <select id="gender" name="gender" required>
-        <option value="male">Male</option>
-        <option value="female">Female</option>
-      </select>
-      
-      <label for="activity">Activity Level:</label>
-      <select id="activity" name="activity" required>
-        <option value="sedentary">Sedentary</option>
-        <option value="lightly active">Lightly Active</option>
-        <option value="moderately active">Moderately Active</option>
-        <option value="very active">Very Active</option>
-        <option value="extra active">Extra Active</option>
-      </select>
-      
-      <button type="submit">Calculate Calories</button>
-    </form>
-    <div id="result"></div>
-  </div>
-  <script>
-    document.getElementById('calorieForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-      
-      const age = document.getElementById('age').value;
-      const weight = document.getElementById('weight').value;
-      const height = document.getElementById('height').value;
-      const gender = document.getElementById('gender').value;
-      const activity = document.getElementById('activity').value;
-      
-      fetch('/calculate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ age, weight, height, gender, activity })
-      })
-      .then(response => response.json())
-      .then(data => {
-        document.getElementById('result').innerText = 'Daily Calorie Requirement: ' + data.calories + ' calories';
-      })
-      .catch(error => console.error('Error:', error));
-    });
-  </script>
-</body>
-</html>
-"""
-
-@app.route('/')
-def index():
-    return render_template_string(html)
-
-@app.route('/calculate', methods=['POST'])
-def calculate():
-    data = request.get_json()
-    age = float(data.get('age', 0))
-    weight = float(data.get('weight', 0))
-    height = float(data.get('height', 0))
-    gender = data.get('gender', 'male').lower()
-    activity_level = data.get('activity', 'sedentary').lower()
-
-    # Calculate BMR using the Mifflin-St Jeor Equation
+def calc_calories(weight, height, age, gender, activity):
+    # BMR
     if gender == 'male':
-        bmr = (10 * weight) + (6.25 * height) - (5 * age) + 5
+        bmr = 10 * weight + 6.25 * height - 5 * age + 5
     else:
-        bmr = (10 * weight) + (6.25 * height) - (5 * age) - 161
-
-    # Activity factors:
-    activity_factors = {
+        bmr = 10 * weight + 6.25 * height - 5 * age - 161
+    factors = {
         'sedentary': 1.2,
         'lightly active': 1.375,
         'moderately active': 1.55,
         'very active': 1.725,
         'extra active': 1.9
     }
-    factor = activity_factors.get(activity_level, 1.2)
-    calories = bmr * factor
+    return bmr * factors.get(activity, 1.2)
 
-    return jsonify({'calories': round(calories, 2)})
+
+def total_req_calories(user, workout_hours, job_hours, today_activity):
+    base = calc_calories(user['weight'], user['height'],
+                         user['age'], user['gender'], today_activity)
+    workout_mins = workout_hours * 60
+    workout_cal = workout_mins * user['weight'] * 0.0175 * 6
+    job_cal = job_hours * 60 * user['weight'] * 0.0175 * 1.5
+    return round(base + workout_cal + job_cal, 2)
+
+
+@app.route('/')
+def index():
+    if session.get('user'):
+        return redirect(url_for('dashboard'))
+    return redirect(url_for('signin'))
+
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if request.method == 'POST':
+        form = request.form
+        if 'otp' not in form:
+            data = {
+                'email': form['email'],
+                'username': form['username'],
+                'age': int(form['age']),
+                'gender': form['gender'],
+                'weight': float(form['weight']),
+                'height': float(form['height'])
+            }
+            session['signup_data'] = data
+            otp = str(random.randint(100000, 999999))
+            session['signup_otp'] = otp
+            send_otp_email(data['email'], otp)
+            flash('OTP sent to your Gmail.')
+            return render_template('signup.html',
+                                   show_otp=True,
+                                   signup_data=data)
+        else:
+            if form['otp'] == session.get('signup_otp'):
+                data = session.pop('signup_data')
+                if find_user(data['email']):
+                    flash('User already exists.')
+                    return redirect(url_for('signup'))
+                all_users = load_users()
+                all_users['users'].append(data)
+                save_users(all_users)
+                session['user'] = data['email']
+                session.pop('signup_otp', None)
+                return redirect(url_for('dashboard'))
+            else:
+                flash('Wrong OTP, try again.')
+                return render_template('signup.html',
+                                       show_otp=True,
+                                       signup_data=session.get('signup_data'))
+    return render_template('signup.html', show_otp=False)
+
+
+@app.route('/signin', methods=['GET', 'POST'])
+def signin():
+    if request.method == 'POST':
+        form = request.form
+        if 'otp' not in form:
+            email = form['email']
+            if not find_user(email):
+                flash('No such user, please sign up.')
+                return redirect(url_for('signup'))
+            session['signin_email'] = email
+            otp = str(random.randint(100000, 999999))
+            session['signin_otp'] = otp
+            send_otp_email(email, otp)
+            flash('OTP sent to your mail.')
+            return render_template('signin.html',
+                                   show_otp=True,
+                                   signin_email=email)
+        else:
+            if form['otp'] == session.get('signin_otp'):
+                session['user'] = session.pop('signin_email')
+                session.pop('signin_otp', None)
+                return redirect(url_for('dashboard'))
+            else:
+                flash('Wrong OTP.')
+                return render_template('signin.html',
+                                       show_otp=True,
+                                       signin_email=session.get('signin_email'))
+    return render_template('signin.html', show_otp=False)
+
+
+@app.route('/dashboard', methods=['GET', 'POST'])
+def dashboard():
+    if not session.get('user'):
+        return redirect(url_for('signin'))
+    user = find_user(session['user'])
+    result = None
+    if request.method == 'POST':
+        workout_hours = float(request.form['workout_time'])
+        job_hours = float(request.form['job_time'])
+        today_activity = request.form['today_activity']
+        result = total_req_calories(user, workout_hours, job_hours, today_activity)
+    return render_template('dashboard.html', user=user, result=result)
+
+
+@app.route('/edit_profile', methods=['POST'])
+def edit_profile():
+    if not session.get('user'):
+        return redirect(url_for('signin'))
+    usr = find_user(session['user'])
+    for f in ['username', 'age', 'gender', 'weight', 'height']:
+        val = request.form[f]
+        if f in ['age']:
+            usr[f] = int(val)
+        elif f in ['weight', 'height']:
+            usr[f] = float(val)
+        else:
+            usr[f] = val
+    data = load_users()
+    data['users'] = [u if u['email'] != usr['email'] else usr for u in data['users']]
+    save_users(data)
+    flash('Profile updated.')
+    return redirect(url_for('dashboard'))
+
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('signin'))
+
 
 if __name__ == '__main__':
     app.run(debug=True)

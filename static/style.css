@@ -1,0 +1,198 @@
+/* Global Reset & Box Sizing */
+/* Profile Popup Container */
+#profileName {
+    font-weight: 700;
+    font-size: 1.25rem;
+}
+  
+#profilePopup {
+    display: none;
+    position: absolute;
+    top: 2.5rem;
+    right: 0;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 1rem 1.5rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    width: 280px;
+    max-width: 90vw;
+    font-size: 0.95rem;
+    z-index: 9999;
+    transition: opacity 0.3s ease;
+}
+  
+/* Profile Popup visible state */
+#profilePopup.show {
+    display: block;
+    opacity: 1;
+}
+  
+/* Buttons styling inside popup */
+#profilePopup button {
+    background: linear-gradient(45deg, #74ebd5, #acb6e5);
+    border: none;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    margin: 0.25rem 0.5rem 0 0;
+    font-weight: 600;
+    transition: background 0.3s ease;
+}
+  
+#profilePopup button:hover {
+    background: linear-gradient(45deg, #5ac6c1, #8b9bd6);
+}
+  
+/* Labels and inputs inside edit form */
+#editProfile label {
+    display: block;
+    margin: 0.6rem 0 0.2rem;
+    font-weight: 600;
+    color: #444;
+}
+  
+#editProfile input,
+#editProfile select {
+    width: 100%;
+    padding: 0.4rem 0.6rem;
+    border: 1.8px solid #ccc;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    transition: border-color 0.3s ease;
+}
+  
+#editProfile input:focus,
+#editProfile select:focus {
+    border-color: #74ebd5;
+    outline: none;
+}
+  
+/* Responsive: Adjust popup width on small screens */
+@media (max-width: 400px) {
+    #profilePopup {
+        width: 95vw;
+        right: 2.5vw;
+    }
+}
+  
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+  
+/* Full-screen gradient background with centered container */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #74ebd5, #acb6e5);
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+  
+/* Container styling with card look and slide-in animation */
+.container {
+    background: #fff;
+    width: 400px;
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+    animation: slideIn 1s ease-out;
+}
+  
+@keyframes slideIn {
+    0% {
+        opacity: 0;
+        transform: translateY(50px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+  
+h1 {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    font-size: 2em;
+    color: #333;
+}
+  
+/* Form Styling */
+form {
+    display: flex;
+    flex-direction: column;
+}
+  
+label {
+    margin: 0.5rem 0 0.2rem;
+    font-weight: bold;
+    color: #555;
+}
+  
+input, select {
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 1em;
+    transition: border-color 0.3s, transform 0.3s;
+}
+  
+input:focus, select:focus {
+    outline: none;
+    border-color: #74ebd5;
+    transform: scale(1.02);
+}
+  
+/* Remove spinner arrows in Chrome, Safari, Edge, Opera */
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+  
+/* Remove spinner arrows in Firefox */
+/* Removed -moz-appearance: textfield; to avoid warnings */
+
+/* Button Styling with Gradient and Animations */
+button {
+    padding: 0.75rem;
+    font-size: 1em;
+    background: linear-gradient(45deg, #74ebd5, #acb6e5);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+  
+button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+  
+button:active {
+    transform: scale(0.98);
+}
+  
+/* Result Display with Fade-In */
+#result {
+    margin-top: 1.5rem;
+    font-size: 1.2em;
+    text-align: center;
+    opacity: 0;
+    animation: fadeIn 1s forwards;
+    animation-delay: 0.5s;
+}
+  
+@keyframes fadeIn {
+    to {
+        opacity: 1;
+    }
+}
